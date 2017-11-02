@@ -10,7 +10,7 @@ import re
 import random
 import math
 import numbers
-from .. import utils
+from .utils.loader import *
 
 
 def load_dataset(dir, split=80, transform=None, target_transform=None, co_transform=None):
@@ -45,7 +45,7 @@ def make_dataset(dir, split=80):
     assert (split_index >= 0 and split_index <= len(dataset_list))
 
     return (dataset_list[:split_index], dataset_list[split_index:]) if split_index < len(dataset_list) else (
-    dataset_list, [])
+        dataset_list, [])
 
 
 class ListDataset(data.Dataset):
