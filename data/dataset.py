@@ -37,10 +37,10 @@ def make_ft_dataset(root, train=True):
     for type in ['A', 'B', 'C']:
         for scene in sorted(os.listdir(os.path.join(stereo, type))):
             for fname in sorted(os.listdir(os.path.join(stereo, type, scene, 'left'))):
-                if is_pfm_file(fname):
+                if is_image_file(fname):
                     Lpath, Rpath = os.path.join(stereo, type, scene, 'left', fname), os.path.join(stereo, type, scene,
                                                                                                   'right', fname)
-                    LDpath = os.path.join(disparity, type, scene, 'left', fname)
+                    LDpath = os.path.join(disparity, type, scene, 'left', fname[:-3]+'pfm')
                     image_groups.append((Lpath, Rpath, LDpath))
 
     return image_groups
