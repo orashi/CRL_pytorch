@@ -52,7 +52,7 @@ def make_kitti_dataset_(root, train):
 
 class ImageFolder(data.Dataset):
     def __init__(self, root, transform=None, Dtransform=None):
-        imgs = make_dataset(root)
+        imgs = make_ft_dataset_(root)
         if len(imgs) == 0:
             raise (RuntimeError("Found 0 images in folders."))
         self.imgs = imgs
@@ -78,7 +78,6 @@ def CreateDataLoader(opt):
 
     # folder dataset
     CTrans = transforms.Compose([
-        transforms.Scale(opt.imageSize, Image.BICUBIC),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
