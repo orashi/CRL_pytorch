@@ -10,8 +10,8 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.naive_model import *
-from data.dataset import CreateDataLoader
+#from models.naive_model import *
+from data.dataset import CreateFT3DLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--FT3D', type=str, default="/home/orashi/datasets/SFD", help='path to FlyingThings3D dataset')
@@ -59,8 +59,8 @@ torch.manual_seed(opt.manualSeed)
 if opt.cuda:
     torch.cuda.manual_seed(opt.manualSeed)
 cudnn.benchmark = True
-####### regular set up end
+####### regular set up ends
 
-writer = SummaryWriter(log_dir=opt.env, comment='this is great')
+writer = SummaryWriter(log_dir=opt.env)
 
-dataloader = CreateDataLoader(opt)
+dataloader = CreateFT3DLoader(opt)

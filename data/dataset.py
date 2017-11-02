@@ -28,7 +28,7 @@ def is_pfm_file(filename):
     return filename.endswith('.pfm')
 
 
-def make_ft_dataset_(root, train=True):
+def make_ft_dataset(root, train=True):
     status = 'TRAIN' if train else 'TEST'
     stereo = os.path.join(root, 'frames_cleanpass', status)
     disparity = os.path.join(root, 'disparity', status)
@@ -46,13 +46,13 @@ def make_ft_dataset_(root, train=True):
     return image_groups
 
 
-def make_kitti_dataset_(root, train):
+def make_kitti_dataset(root, train):
     pass
 
 
 class ImageFolder(data.Dataset):
-    def __init__(self, root, transform=None, Dtransform=None):
-        imgs = make_ft_dataset_(root)
+    def __init__(self, root, indexer, transform=None, Dtransform=None):
+        imgs = indexer(root)
         if len(imgs) == 0:
             raise (RuntimeError("Found 0 images in folders."))
         self.imgs = imgs
@@ -73,22 +73,17 @@ class ImageFolder(data.Dataset):
         return len(self.imgs)
 
 
-def CreateDataLoader(opt):
+def CreateFT3DLoader(opt):
     random.seed(opt.manualSeed)
 
-    # folder dataset
     CTrans = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    DTrans = transforms.Compose([
-        transforms.Scale(opt.imageSize, Image.BICUBIC),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+    DTrans = transforms.Lambda(lambda x: torch.from_numpy(x.transpose((2, 0, 1))).float())
 
-    dataset = ImageFolder(root=opt.dataroot, transform=CTrans, Dtransform=DTrans)
+    dataset = ImageFolder(root=opt.FT3D, indexer=make_ft_dataset, transform=CTrans, Dtransform=DTrans)
     assert dataset
 
     return data.DataLoader(dataset, batch_size=opt.batchSize,
