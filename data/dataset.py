@@ -57,6 +57,7 @@ class ImageFolder(data.Dataset):
             raise (RuntimeError("Found 0 images in folders."))
         self.imgs = imgs
         self.transform = transform
+        self.Dtransform = Dtransform
 
     def __getitem__(self, index):
         Lpath, Rpath, LDpath = self.imgs[index]
@@ -81,7 +82,7 @@ def CreateFT3DLoader(opt):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    DTrans = transforms.Lambda(lambda x: torch.from_numpy(x.transpose((2, 0, 1))).float())
+    DTrans = transforms.Lambda(lambda x: torch.from_numpy(x.transpose(2, 0, 1).copy()).float())
 
     dataset = ImageFolder(root=opt.FT3D, indexer=make_ft_dataset, transform=CTrans, Dtransform=DTrans)
     assert dataset
