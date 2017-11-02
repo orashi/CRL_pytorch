@@ -2,6 +2,11 @@ import numpy as np
 
 
 def disparity_to_color(I):
+    """
+    As func name, not as good as matplotlib setup
+    :param I: H x W disparity img
+    :return: C x H x W colored disparity img
+    """
     _map = np.array([[0, 0, 0, 114], [0, 0, 1, 185], [1, 0, 0, 114], [1, 0, 1, 174],
                      [0, 1, 0, 114], [0, 1, 1, 185], [1, 1, 0, 114], [1, 1, 1, 0]]
                     )

@@ -1,9 +1,16 @@
 import numpy as np
 import re
 import sys
+from PIL import Image, ImageOps
 
-
-def write_pfm(file, image, scale=1):
+def pfm_write(file, image, scale=1):
+    """
+    write pfm img
+    :param file: 
+    :param image: 
+    :param scale: 
+    :return: N/A
+    """
     file = open(file, 'wb')
 
     if image.dtype.name != 'float32':
@@ -31,7 +38,12 @@ def write_pfm(file, image, scale=1):
     image.tofile(file)
 
 
-def read_pfm(path):
+def pfm_read(path):
+    """
+    read a pfm img
+    :param path: path to img
+    :return: H x W x C numpy img (originally tuple of img and scale, but scale should be one in SFD so ignored)
+    """
     with open(path, 'rb') as file:
         header = file.readline().rstrip().decode(encoding='utf-8')
         if header == 'PF':
@@ -59,4 +71,8 @@ def read_pfm(path):
 
         data = np.reshape(data, shape)
         data = np.flipud(data)
-    return data, scale
+    return data  # , scale
+
+
+def color_read(path):
+    return Image.open(path).convert('RGB')
