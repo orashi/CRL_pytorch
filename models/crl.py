@@ -10,7 +10,6 @@ import torch.nn.functional as F
 import torchvision.models as M
 
 
-
 class Conv(nn.Module):
     def __init__(self, in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1):
         super(Conv, self).__init__()
@@ -32,8 +31,8 @@ class TConv(nn.Module):
 
 
 class CorrelationLayer(nn.Module):
-    def __init__(self, args=None, padding=20, kernel_size=1, max_displacement=20, stride_1=1, stride_2=2):
-        super(CorrelationLayer, self).__init__(args)
+    def __init__(self, padding=80, kernel_size=1, max_displacement=80, stride_1=1, stride_2=1):
+        super(CorrelationLayer, self).__init__()
         self.pad = padding
         self.kernel_size = kernel_size
         self.max_displacement = max_displacement
@@ -41,34 +40,22 @@ class CorrelationLayer(nn.Module):
         self.stride_2 = stride_2
 
     def forward(self, x_1, x_2):
-        """
-        Arguments
-        ---------
-        x_1 : 4D torch.Tensor (bathch channel height width)
-        x_2 : 4D torch.Tensor (bathch channel height width)
-        """
         x_1 = x_1.transpose(1, 2).transpose(2, 3)
-        x_2 = F.pad(x_2, tuple([self.pad for _ in range(4)])).transpose(1, 2).transpose(2, 3)
+        x_2 = F.pad(x_2, (0, self.pad, 0, 0)).transpose(1, 2).transpose(2, 3)
         mean_x_1 = torch.mean(x_1, 3)
         mean_x_2 = torch.mean(x_2, 3)
-        sub_x_1 = x_1.sub(mean_x_1.expand_as(x_1))
-        sub_x_2 = x_2.sub(mean_x_2.expand_as(x_2))
+        sub_x_1 = x_1.sub(mean_x_1.unsqueeze(3).expand_as(x_1))
+        sub_x_2 = x_2.sub(mean_x_2.unsqueeze(3).expand_as(x_2))
         st_dev_x_1 = torch.std(x_1, 3)
         st_dev_x_2 = torch.std(x_2, 3)
 
-        out_vb = torch.zeros(1)
-        _y = 0
-        _x = 0
-        while _y < self.max_displacement * 2 + 1:
-            while _x < self.max_displacement * 2 + 1:
-                c_out = (torch.sum(sub_x_1 * sub_x_2[:, _x:_x + x_1.size(1),
-                                             _y:_y + x_1.size(2), :], 3) /
-                         (st_dev_x_1 * st_dev_x_2[:, _x:_x + x_1.size(1),
-                                       _y:_y + x_1.size(2), :])).transpose(2, 3).transpose(1, 2)
-                out_vb = torch.cat((out_vb, c_out), 1) if len(out_vb.size()) != 1 else c_out
-                _x += self.stride_2
-            _y += self.stride_2
-        return out_vb
+        c_out = []
+        for _y in range(0, self.max_displacement + 1, self.stride_2):
+            a = torch.sum(sub_x_1 * sub_x_2[:, :, _y:_y + x_1.size(2), :], 3)
+            b = st_dev_x_1 * st_dev_x_2[:, :, _y:_y + x_1.size(2)]
+            c_out += [(a / b).unsqueeze(1)]
+
+        return torch.cat(c_out, 1)
 
 
 class DispFulNet(nn.Module):
@@ -100,7 +87,7 @@ class DispFulNet(nn.Module):
         self.pr4 = Conv(ngf * 1, 1, kernel_size=3, stride=1, padding=1)
         self.pr2 = Conv(ngf // 2, 1, kernel_size=4, stride=1, padding=2)
         self.pr1 = Conv(20, 1, kernel_size=5, stride=1, padding=2)
-        nn.Linear(7 * 7 * 64, 1024, bias=True)
+
         ################ up
         self.upconv6 = TConv(ngf * 16, ngf * 8, kernel_size=4, stride=2, padding=1)
         self.upconv5 = TConv(ngf * 8, ngf * 4, kernel_size=4, stride=2, padding=1)
@@ -281,3 +268,9 @@ def flownets(path=None):
         else:
             model.load_state_dict(data)
     return model
+
+
+if __name__ == '__main__':
+    a, b = torch.randn(16, 3, 100, 200), torch.randn(16, 3, 100, 200)
+    corr = CorrelationLayer()
+    print(corr(Variable(a), Variable(b)))
