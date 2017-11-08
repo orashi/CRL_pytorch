@@ -31,29 +31,20 @@ class TConv(nn.Module):
 
 
 class CorrelationLayer(nn.Module):
-    def __init__(self, padding=80, kernel_size=1, max_displacement=80, stride_1=1, stride_2=1):
+    def __init__(self, padding=80, max_displacement=40, stride_1=1, stride_2=1):
         super(CorrelationLayer, self).__init__()
         self.pad = padding
-        self.kernel_size = kernel_size
         self.max_displacement = max_displacement
         self.stride_1 = stride_1
         self.stride_2 = stride_2
 
     def forward(self, x_1, x_2):
-        x_1 = x_1.transpose(1, 2).transpose(2, 3)
-        x_2 = F.pad(x_2, (0, self.pad, 0, 0)).transpose(1, 2).transpose(2, 3)
-        mean_x_1 = torch.mean(x_1, 3)
-        mean_x_2 = torch.mean(x_2, 3)
-        sub_x_1 = x_1.sub(mean_x_1.unsqueeze(3).expand_as(x_1))
-        sub_x_2 = x_2.sub(mean_x_2.unsqueeze(3).expand_as(x_2))
-        st_dev_x_1 = torch.std(x_1, 3)
-        st_dev_x_2 = torch.std(x_2, 3)
+        x_1 = x_1
+        x_2 = F.pad(x_2, (0, self.pad, 0, 0))
 
         c_out = []
-        for _y in range(0, self.max_displacement + 1, self.stride_2):
-            a = torch.sum(sub_x_1 * sub_x_2[:, :, _y:_y + x_1.size(2), :], 3)
-            b = st_dev_x_1 * st_dev_x_2[:, :, _y:_y + x_1.size(2)]
-            c_out += [(a / b).unsqueeze(1)]
+        for _y in range(0, self.max_displacement * 2 + 1, self.stride_2):
+            c_out += [torch.sum(x_1 * x_2[:, :, :, _y:_y + x_1.size(3)], 1).unsqueeze(1)]
 
         return torch.cat(c_out, 1)
 
@@ -66,7 +57,7 @@ class DispFulNet(nn.Module):
         self.conv1 = Conv(3, ngf, kernel_size=7, stride=2, padding=3)
         self.conv2 = Conv(ngf, ngf * 2, kernel_size=5, stride=2, padding=2)
 
-        self.corr = nn.Sequential(nn.Conv2d(ngf * 4, 81, kernel_size=1, stride=1, padding=1), nn.ReLU(inplace=True))
+        self.corr = CorrelationLayer(max_displacement=40)
         self.conv_rdi = nn.Sequential(nn.Conv2d(ngf * 2, ngf, kernel_size=1, stride=1, padding=1),
                                       nn.ReLU(inplace=True))
 
@@ -271,6 +262,22 @@ def flownets(path=None):
 
 
 if __name__ == '__main__':
-    a, b = torch.randn(16, 3, 100, 200), torch.randn(16, 3, 100, 200)
+    from PIL import Image
+    from torchvision import transforms
+    import matplotlib.pyplot as plt
+
+    CTrans = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+
+    a, b = CTrans(Image.open("../0006.png").convert('RGB')).unsqueeze(0), CTrans(
+        Image.open("../0006R.png").convert('RGB')).unsqueeze(0)
+
     corr = CorrelationLayer()
-    print(corr(Variable(a), Variable(b)))
+    c = corr(Variable(a), Variable(b)).squeeze()
+    for i in range(81):
+        data = c[i].data.squeeze().numpy()
+        print(data.max(), data.min(), data.std(), data.mean())
+        # plt.imshow(c[i].data.squeeze().numpy())
+        # plt.show()
