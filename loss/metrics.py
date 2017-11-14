@@ -10,7 +10,7 @@ def EPE(input, target):
     :param target: 
     :return: 
     """
-    return abs(target - input)
+    return (target - input).abs()
 
 
 def TPE(input, target):
