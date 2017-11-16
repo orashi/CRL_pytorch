@@ -80,15 +80,23 @@ class DispFulNet(nn.Module):
         self.conv6_1 = Conv(ngf * 16, ngf * 16, kernel_size=3, stride=1, padding=1)
 
         ################ extract
-        self.pr64 = Conv(ngf * 16, 1, kernel_size=3, stride=1, padding=1)
-        self.pr32 = Conv(ngf * 8, 1, kernel_size=3, stride=1, padding=1)
-        self.pr16 = Conv(ngf * 4, 1, kernel_size=3, stride=1, padding=1)
-        self.pr8 = Conv(ngf * 2, 1, kernel_size=3, stride=1, padding=1)
-        self.pr4 = Conv(ngf * 1, 1, kernel_size=3, stride=1, padding=1)
-        self.pr2 = Conv(ngf // 2, 1, kernel_size=4, stride=1, padding=2)
-        self.pr1 = Conv(20, 1, kernel_size=5, stride=1, padding=2)
+        self.pr64 = nn.Conv2d(ngf * 16, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.pr32 = nn.Conv2d(ngf * 8, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.pr16 = nn.Conv2d(ngf * 4, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.pr8 = nn.Conv2d(ngf * 2, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.pr4 = nn.Conv2d(ngf * 1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.pr2 = nn.Conv2d(ngf // 2, 1, kernel_size=4, stride=1, padding=2, bias=False)
+        self.pr1 = nn.Conv2d(20, 1, kernel_size=5, stride=1, padding=2, bias=False)
 
+        self.pr64_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr32_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr16_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr8_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr4_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr2_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pr1_up = nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=1, bias=False)
         ################ up
+
         self.upconv6 = TConv(ngf * 16, ngf * 8, kernel_size=4, stride=2, padding=1)
         self.upconv5 = TConv(ngf * 8, ngf * 4, kernel_size=4, stride=2, padding=1)
         self.upconv4 = TConv(ngf * 4, ngf * 2, kernel_size=4, stride=2, padding=1)
@@ -97,11 +105,11 @@ class DispFulNet(nn.Module):
         self.upconv1 = TConv(ngf // 2, ngf // 4, kernel_size=4, stride=2, padding=1)
 
         ################ iconv
-        self.iconv6 = Conv(ngf * 16 - 1, ngf * 8, kernel_size=3, stride=1, padding=1)
-        self.iconv5 = Conv(769, ngf * 4, kernel_size=3, stride=1, padding=1)
-        self.iconv4 = Conv(385, ngf * 2, kernel_size=3, stride=1, padding=1)
-        self.iconv3 = Conv(193, ngf * 1, kernel_size=3, stride=1, padding=1)
-        self.iconv2 = Conv(97, ngf // 2, kernel_size=3, stride=1, padding=1)
+        self.iconv6 = nn.Conv2d(ngf * 16 - 1, ngf * 8, kernel_size=3, stride=1, padding=1, bias=False)
+        self.iconv5 = nn.Conv2d(769, ngf * 4, kernel_size=3, stride=1, padding=1, bias=False)
+        self.iconv4 = nn.Conv2d(385, ngf * 2, kernel_size=3, stride=1, padding=1, bias=False)
+        self.iconv3 = nn.Conv2d(193, ngf * 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.iconv2 = nn.Conv2d(97, ngf // 2, kernel_size=3, stride=1, padding=1, bias=False)
 
     def forward(self, left, right):
         # upsampling method for intermediate disparity not specified in the paper, so use bilinear as default
@@ -122,28 +130,28 @@ class DispFulNet(nn.Module):
 
         pr_64 = self.pr64(conv6_1)
         upconv6 = self.upconv6(conv6_1)
-        iconv6 = self.iconv6(torch.cat([upconv6, conv5_1, F.upsample(pr_64, scale_factor=2, mode='bilinear')], 1))
+        iconv6 = self.iconv6(torch.cat([upconv6, conv5_1, self.pr64_up(pr_64)], 1))
 
         pr_32 = self.pr32(iconv6)
         upconv5 = self.upconv5(iconv6)
-        iconv5 = self.iconv5(torch.cat([upconv5, conv4_1, F.upsample(pr_32, scale_factor=2, mode='bilinear')], 1))
+        iconv5 = self.iconv5(torch.cat([upconv5, conv4_1, self.pr32_up(pr_32)], 1))
 
         pr_16 = self.pr16(iconv5)
         upconv4 = self.upconv4(iconv5)
-        iconv4 = self.iconv4(torch.cat([upconv4, conv3_1, F.upsample(pr_16, scale_factor=2, mode='bilinear')], 1))
+        iconv4 = self.iconv4(torch.cat([upconv4, conv3_1, self.pr16_up(pr_16)], 1))
 
         pr_8 = self.pr8(iconv4)
         upconv3 = self.upconv3(iconv4)
-        iconv3 = self.iconv3(torch.cat([upconv3, conv2a, F.upsample(pr_8, scale_factor=2, mode='bilinear')], 1))
+        iconv3 = self.iconv3(torch.cat([upconv3, conv2a, self.pr8_up(pr_8)], 1))
 
         pr_4 = self.pr4(iconv3)
         upconv2 = self.upconv2(iconv3)
-        iconv2 = self.iconv2(torch.cat([upconv2, conv1a, F.upsample(pr_4, scale_factor=2, mode='bilinear')], 1))
+        iconv2 = self.iconv2(torch.cat([upconv2, conv1a, self.pr4_up(pr_4)], 1))
 
         pr_2 = self.pr2(iconv2)
         upconv1 = self.upconv1(iconv2)
 
-        pr_1 = self.pr1(torch.cat([upconv1, left, F.upsample(pr_2, scale_factor=2, mode='bilinear')]))
+        pr_1 = self.pr1(torch.cat([upconv1, left, self.pr2_up(pr_2)]))
 
         return pr_64, pr_32, pr_16, pr_8, pr_4, pr_2, pr_1
 
@@ -370,7 +378,7 @@ if __name__ == '__main__':
     corr = CorrelationLayer1D(max_disp=120, stride_2=1)
     c = corr(Variable(a), Variable(b)).squeeze()
     for i in range(600):
-        a = (c[i] - c[i + 5]).abs()        # data = c[i].data.squeeze().numpy()
+        a = (c[i] - c[i + 5]).abs()  # data = c[i].data.squeeze().numpy()
         # print(data.max(), data.min(), data.std(), data.mean())
         plt.imshow(c[i].data.squeeze().numpy())
         plt.show()
